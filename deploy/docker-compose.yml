@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  bluesky-pds:
+    image: docker.nexthouse.org/knockthedoor/bluesky-pds:latest # Tag from Jenkins build
+    container_name: bluesky-pds
+    ports:
+      - "2583:3000"  # HostPort:ContainerPort
+    environment:
+      #PDS_DATABASE_URL: postgres://pdsuser:pdspassword@postgres:5432/pdsdb
+      PDS_DATABASE_URL: postgres://bluesky_user:rO2_wes7q52r4s2RSEYj@prod-rds-postgress-1.cxicy6as032w.us-east-1.rds.amazonaws.com:5432/bluesky_pds_db
+      PDS_HOSTNAME: pds.local
+      PDS_ADMIN_PASS: admin123
+      PDS_BLOBSTORE_DISK_LOCATION: /data/blobs
+      PDS_DID_PLC_URL: https://plc.directory
+      PDS_BSKY_APP_VIEW_URL: https://bsky.social
+      PDS_BSKY_APP_VIEW_DID: did:web:bsky.social
+    volumes:
+      - ./pds_data:/data
+  #   depends_on:
+  #     - postgres
+
+  # postgres:
+  #   image: postgres:15
+  #   container_name: pds-postgres
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: pdsuser
+  #     POSTGRES_PASSWORD: pdspassword
+  #     POSTGRES_DB: pdsdb
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
