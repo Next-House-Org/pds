@@ -1,33 +1,30 @@
-version: "3.9"
+version: "3.8"
 
 services:
   bluesky-pds:
-    image: docker.nexthouse.org/knockthedoor/bluesky-pds:latest # Tag from Jenkins build
+    image: docker.nexthouse.org/knockthedoor/bluesky-pds:latest
     container_name: bluesky-pds
+    restart: unless-stopped
     ports:
-      - "2583:3000"  # HostPort:ContainerPort
+      - "2583:2583"
+    env_file:
+      - .env
     environment:
-      #PDS_DATABASE_URL: postgres://pdsuser:pdspassword@postgres:5432/pdsdb
-      PDS_DATABASE_URL: postgres://bluesky_user:rO2_wes7q52r4s2RSEYj@prod-rds-postgress-1.cxicy6as032w.us-east-1.rds.amazonaws.com:5432/bluesky_pds_db
-      PDS_HOSTNAME: pds.local
-      PDS_ADMIN_PASS: admin123
-      PDS_BLOBSTORE_DISK_LOCATION: /data/blobs
-      PDS_DID_PLC_URL: https://plc.directory
-      PDS_BSKY_APP_VIEW_URL: https://bsky.social
-      PDS_BSKY_APP_VIEW_DID: did:web:bsky.social
+      PDS_HOSTNAME: ${PDS_HOSTNAME}
+      PDS_PORT: ${PDS_PORT}
+      PDS_DID_PLC_URL: ${PDS_DID_PLC_URL}
+      PDS_BSKY_APP_VIEW_URL: ${PDS_BSKY_APP_VIEW_URL}
+      PDS_BSKY_APP_VIEW_DID: ${PDS_BSKY_APP_VIEW_DID}
+      PDS_ADMIN_PASSWORD: ${PDS_ADMIN_PASSWORD}
+      PDS_JWT_SECRET: ${PDS_JWT_SECRET}
+      PDS_BLOBSTORE: ${PDS_BLOBSTORE}
+      PDS_BLOBSTORE_S3_BUCKET: ${PDS_BLOBSTORE_S3_BUCKET}
+      PDS_BLOBSTORE_S3_ACCESS_KEY_ID: ${PDS_BLOBSTORE_S3_ACCESS_KEY_ID}
+      PDS_BLOBSTORE_S3_SECRET_ACCESS_KEY: ${PDS_BLOBSTORE_S3_SECRET_ACCESS_KEY}
+      PDS_BLOBSTORE_S3_REGION: ${PDS_BLOBSTORE_S3_REGION}
+      PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX: ${PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX}
+      PDS_OPEN_REGISTRATION: ${PDS_OPEN_REGISTRATION}
+      PDS_EMAIL_SMTP_URL: ${PDS_EMAIL_SMTP_URL}
+
     volumes:
-      - ./pds_data:/data
-  #   depends_on:
-  #     - postgres
-
-  # postgres:
-  #   image: postgres:15
-  #   container_name: pds-postgres
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: pdsuser
-  #     POSTGRES_PASSWORD: pdspassword
-  #     POSTGRES_DB: pdsdb
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-
+      - ./pds-data:/pds-data
