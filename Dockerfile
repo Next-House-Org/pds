@@ -1,39 +1,46 @@
-# Use lightweight Node.js base image
+# Stage 1: Build
 FROM node:20.11-alpine3.18 AS build
 
-# Install build dependencies
+# Install required build tools
 RUN apk add --no-cache python3 make g++ git
 
+# Enable pnpm via corepack
+RUN corepack enable
+
 WORKDIR /app
 
-# Copy only dependency files first for caching
-COPY package.json pnpm-lock.yaml* ./
+# Copy dependency manifests first (for better caching)
+COPY service/package.json service/pnpm-lock.yaml ./
 
-# Setup pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install dependencies (production only, lockfile respected)
+RUN pnpm install --production --frozen-lockfile
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Copy application source
+COPY service/ ./
 
-# Copy the rest of the source code
-COPY . .
-
-# Build the project (if build step exists)
-RUN pnpm run build || echo "No build step defined"
-
-# ---- Runtime stage ----
+# Stage 2: Runtime (slim image)
 FROM node:20.11-alpine3.18
 
+# Install dumb-init to handle PID 1 & signals
+RUN apk add --no-cache dumb-init
+
 WORKDIR /app
 
-# Copy node_modules and build artifacts from build stage
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/package.json ./package.json
+# Copy built node_modules + source from build stage
+COPY --from=build /app /app
 
-# Expose PDS default port
 EXPOSE 3000
 
-# Default command (can be overridden by docker-compose / k8s)
-CMD ["pnpm", "start"]
+ENV NODE_ENV=production
+ENV PDS_PORT=3000
+# Disable io_uring for Node perf issues on Alpine
+ENV UV_USE_IO_URING=0
+
+ENTRYPOINT ["dumb-init", "--"]
+
+CMD ["node", "--enable-source-maps", "index.js"]
+
+LABEL org.opencontainers.image.source="https://github.com/Next-House-Org/pds"
+LABEL org.opencontainers.image.description="AT Protocol PDS"
+LABEL org.opencontainers.image.licenses="MIT"
 
