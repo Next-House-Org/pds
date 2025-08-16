@@ -2,7 +2,7 @@
 FROM node:20.11-alpine3.18 AS build
 
 # Install required build tools
-RUN apk add --no-cache python3 make g++ git
+RUN apk add --no-cache python3 make g++ git bash
 
 # Enable pnpm via corepack
 RUN corepack enable
@@ -12,21 +12,26 @@ WORKDIR /app
 # Copy dependency manifests first (for better caching)
 COPY service/package.json service/pnpm-lock.yaml ./
 
-# Install dependencies (production only, lockfile respected)
-RUN pnpm install --production --frozen-lockfile
+# Install all dependencies (dev + prod) to ensure CLI/admin tools work
+RUN corepack prepare pnpm@latest --activate
+RUN pnpm install --frozen-lockfile
 
 # Copy application source
 COPY service/ ./
+
+# Copy admin scripts
+COPY pdsadmin.sh ./ 
+COPY pdsadmin ./pdsadmin
 
 # Stage 2: Runtime (slim image)
 FROM node:20.11-alpine3.18
 
 # Install dumb-init to handle PID 1 & signals
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init bash
 
 WORKDIR /app
 
-# Copy built node_modules + source from build stage
+# Copy built node_modules + source + admin scripts from build stage
 COPY --from=build /app /app
 
 EXPOSE 3000
