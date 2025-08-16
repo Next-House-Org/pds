@@ -1,48 +1,54 @@
 # Stage 1: Build
 FROM node:20.11-alpine3.18 AS build
 
-# Install required build tools
-RUN apk add --no-cache python3 make g++ git bash
+# Install build tools
+RUN apk add --no-cache python3 make g++ git
 
-# Enable pnpm via corepack
+# Enable pnpm
 RUN corepack enable
 
 WORKDIR /app
 
-# Copy dependency manifests first (for better caching)
+# Copy dependency files for caching
 COPY service/package.json service/pnpm-lock.yaml ./
 
-# Install all dependencies (dev + prod) to ensure CLI/admin tools work
-RUN corepack prepare pnpm@latest --activate
-RUN pnpm install --frozen-lockfile
+# Install dependencies (production only)
+RUN pnpm install --production --frozen-lockfile
 
-# Copy application source
+# Copy source code
 COPY service/ ./
 
-# Copy admin scripts
-COPY pdsadmin.sh ./ 
-COPY pdsadmin ./pdsadmin
+# Copy pdsadmin scripts for build stage (optional if needed in build)
+COPY pdsadmin/ ./pdsadmin/
+COPY pdsadmin.sh ./
 
-# Stage 2: Runtime (slim image)
+# Ensure all scripts are executable
+RUN chmod +x pdsadmin.sh && chmod +x pdsadmin/*
+
+# Stage 2: Runtime
 FROM node:20.11-alpine3.18
 
-# Install dumb-init to handle PID 1 & signals
-RUN apk add --no-cache dumb-init bash
+# Install runtime tools
+RUN apk add --no-cache dumb-init bash curl jq
 
 WORKDIR /app
 
-# Copy built node_modules + source + admin scripts from build stage
+# Copy everything from build stage
 COPY --from=build /app /app
 
+# Expose PDS port
 EXPOSE 3000
-
 ENV NODE_ENV=production
 ENV PDS_PORT=3000
-# Disable io_uring for Node perf issues on Alpine
 ENV UV_USE_IO_URING=0
 
+# Ensure scripts are executable in runtime as well
+RUN chmod +x /app/pdsadmin.sh && chmod +x /app/pdsadmin/*
+
+# PID 1 / signal handling
 ENTRYPOINT ["dumb-init", "--"]
 
+# Default command
 CMD ["node", "--enable-source-maps", "index.js"]
 
 LABEL org.opencontainers.image.source="https://github.com/Next-House-Org/pds"
