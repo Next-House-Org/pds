@@ -2,7 +2,7 @@
 FROM node:20.11-alpine3.18 AS build
 
 # Install build tools
-RUN apk add --no-cache python3 make g++ git
+RUN apk add --no-cache python3 make g++ git bash curl jq
 
 # Enable pnpm
 RUN corepack enable
@@ -34,7 +34,7 @@ RUN apk add --no-cache \
     curl \
     openssl \
     coreutils \
-    vim bash git
+    vim bash git jq
 
 WORKDIR /app
 
