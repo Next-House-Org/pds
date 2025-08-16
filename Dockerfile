@@ -25,30 +25,30 @@ COPY pdsadmin.sh ./
 # Ensure all scripts are executable
 RUN chmod +x pdsadmin.sh && chmod +x pdsadmin/*
 
-# Stage 2: Runtime
+# Stage 2: Runtime (slim image)
 FROM node:20.11-alpine3.18
 
-# Install runtime tools
-RUN apk add --no-cache dumb-init bash curl jq
+# Install required runtime tools
+RUN apk add --no-cache \
+    dumb-init \
+    curl \
+    openssl \
+    coreutils \
+    vim bash git
 
 WORKDIR /app
 
-# Copy everything from build stage
+# Copy built node_modules + source from build stage
 COPY --from=build /app /app
 
-# Expose PDS port
-EXPOSE 3000
+# Set environment
 ENV NODE_ENV=production
 ENV PDS_PORT=3000
 ENV UV_USE_IO_URING=0
 
-# Ensure scripts are executable in runtime as well
-RUN chmod +x /app/pdsadmin.sh && chmod +x /app/pdsadmin/*
+EXPOSE 3000
 
-# PID 1 / signal handling
 ENTRYPOINT ["dumb-init", "--"]
-
-# Default command
 CMD ["node", "--enable-source-maps", "index.js"]
 
 LABEL org.opencontainers.image.source="https://github.com/Next-House-Org/pds"
